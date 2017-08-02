@@ -1,6 +1,8 @@
 *.swp
 bin/
 pkg/
+tags/
+tmp/
 src/code.google.com
 src/github.com
 src/bitbucket.org

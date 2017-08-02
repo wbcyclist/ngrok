@@ -3,7 +3,6 @@ package client
 import (
 	"crypto/tls"
 	"fmt"
-	metrics "github.com/rcrowley/go-metrics"
 	"io/ioutil"
 	"math"
 	"net"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -49,6 +50,7 @@ type ClientModel struct {
 	serverAddr    string
 	proxyUrl      string
 	authToken     string
+	password      string
 	tlsConfig     *tls.Config
 	tunnelConfig  map[string]*TunnelConfiguration
 	configPath    string
@@ -72,6 +74,8 @@ func newClientModel(config *Configuration, ctl mvc.Controller) *ClientModel {
 
 		// auth token
 		authToken: config.AuthToken,
+
+		password: config.Password,
 
 		// connection status
 		connStatus: mvc.ConnConnecting,
@@ -240,6 +244,7 @@ func (c *ClientModel) control() {
 		Version:   version.Proto,
 		MmVersion: version.MajorMinor(),
 		User:      c.authToken,
+		Password:  c.password,
 	}
 
 	if err = msg.WriteMsg(ctlConn, auth); err != nil {

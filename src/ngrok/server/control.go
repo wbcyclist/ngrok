@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"ngrok/conn"
@@ -58,6 +59,9 @@ type Control struct {
 
 	// synchronizer for controller shutdown of entire Control
 	shutdown *util.Shutdown
+
+	isAdmin  bool
+	userInfo *UserInfo
 }
 
 func NewControl(ctlConn conn.Conn, authMsg *msg.Auth) {
@@ -81,6 +85,18 @@ func NewControl(ctlConn conn.Conn, authMsg *msg.Auth) {
 		_ = msg.WriteMsg(ctlConn, &msg.AuthResp{Error: e.Error()})
 		ctlConn.Close()
 	}
+	
+	/* if opts.pass != authMsg.Password {
+		failAuth(errors.New("Auth failed"))
+		return
+	} */
+	if opts.pass == authMsg.Password {
+		c.isAdmin = true
+	}
+
+	if authMsg.ClientId == "" {
+		authMsg.ClientId = authMsg.User
+  	}
 
 	// register the clientid
 	c.id = authMsg.ClientId
@@ -91,6 +107,14 @@ func NewControl(ctlConn conn.Conn, authMsg *msg.Auth) {
 			return
 		}
 	}
+
+	//log.Info("clientId: %s", c.id)
+	ui := CheckForLogin(authMsg)
+	if ui == nil && !c.isAdmin {
+		failAuth(errors.New("Auth failed"))
+		return
+	}
+	c.userInfo = ui
 
 	// set logging prefix
 	ctlConn.SetType("ctl")
@@ -127,6 +151,11 @@ func NewControl(ctlConn conn.Conn, authMsg *msg.Auth) {
 
 // Register a new tunnel on this control connection
 func (c *Control) registerTunnel(rawTunnelReq *msg.ReqTunnel) {
+	if !c.isAdmin && rawTunnelReq.Subdomain != "" && !c.userInfo.CheckDns(rawTunnelReq.Subdomain) {
+		c.conn.Warn("Dns not ok %s, ignore", rawTunnelReq.Subdomain)
+		return
+	}
+	
 	for _, proto := range strings.Split(rawTunnelReq.Protocol, "+") {
 		tunnelReq := *rawTunnelReq
 		tunnelReq.Protocol = proto
