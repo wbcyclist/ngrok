@@ -323,8 +323,7 @@ func NewConfigMgr() *ConfigMgr {
 	return &ConfigMgr{db: db, users: make(map[string]*UserInfo), dns: make(map[string]*UserInfo)}
 }
 
-func ConfigMain() {
-	addr := ":4446"
+func ConfigMain(addr string) {
 	cMgr = NewConfigMgr()
 	cMgr.db.LoadAll(cMgr)
 
