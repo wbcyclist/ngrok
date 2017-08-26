@@ -21,7 +21,6 @@ $NGROKD -domain="$DOMAIN" \
 		-tlsKey=$TLSKEY_PATH \
 		-log-level="INFO" \
 		-log=$NGROKD_LOG \
-		-pass="$PASSWD"
+		-pass="$PASSWD" >/dev/null 2>&1 & echo $! > /var/run/ngrokd.pid
 
-
-# nohup /root/ngrokd_startup.sh >/dev/null 2>&1 &
+# sh /root/ngrokd_startup.sh

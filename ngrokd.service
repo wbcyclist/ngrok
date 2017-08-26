@@ -1,0 +1,29 @@
+# This file is systemd template for ngrokd service. To
+# register ngrokd with systemd, place the ngrokd.service file
+# to the /lib/systemd/system/ directory and then start it
+# using systemctl (see bellow).
+#
+# Enable ngrokd to start on boot:
+#         systemctl enable ngrokd.service
+#
+# Start ngrokd immediately:
+#         systemctl start ngrokd.service
+#
+# Stop ngrokd:
+#         systemctl stop ngrokd.service
+#
+# Status:
+#         systemctl status ngrokd.service
+
+[Unit]
+Description=Start Ngrok Server.
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/ngrokd.pid
+ExecStart=/usr/bin/sh /root/ngrokd_startup.sh
+ExecStop=/usr/bin/killall ngrokd
+
+[Install]
+WantedBy=multi-user.target
