@@ -1,0 +1,364 @@
+#! /bin/bash
+# chkconfig: 2345 55 25
+# Description: Startup script for Ngrok on Debian. Place in /etc/init.d and
+# run 'update-rc.d -f ngrokd defaults', or use the appropriate command on your
+# distro. For CentOS/Redhat run: 'chkconfig --add ngrokd'
+#=======================================================
+#   System Required:  CentOS/Debian/Ubuntu (32bit/64bit)
+#   Description:  Manager for Ngrok, Written by Clang
+#   Author: Clang <admin@clangcn.com>
+#   Intro:  http://clangcn.com
+#=======================================================
+### BEGIN INIT INFO
+# Provides:          ngrok
+# Required-Start:    $all
+# Required-Stop:     $all
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts the ngrok
+# Description:       starts ngrok using start-stop
+### END INIT INFO
+# Source function library
+if [ -f /etc/rc.d/init.d/functions ]; then
+    . /etc/rc.d/init.d/functions
+# Check that networking is up.
+    [ ${NETWORKING} ="yes" ] || exit 0
+fi
+ProgramName="Ngrok"
+ProGramInstallPath="/usr/local/ngrok"
+ProgramPath="/usr/local/ngrok/bin"
+NAME=ngrokd
+BIN=${ProgramPath}/${NAME}
+CONFIGFILE=${ProGramInstallPath}/ngrokd_config.sh
+SCRIPTNAME=/etc/init.d/${NAME}
+PID_DIR=/var/run
+PID_FILE=${PID_DIR}/ngrokd.pid
+RET_VAL=0
+
+[ -x $BIN ] || exit 0
+if [ ! -d $PID_DIR ]; then
+    mkdir -p $PID_DIR
+    if [ $? -ne 0 ]; then
+        echo "Creating PID directory $PID_DIR failed"
+        exit 1
+    fi
+fi
+
+fun_check_run() {
+    PID=`ps -ef | grep -v grep | grep -i "${BIN}" | awk '{print $2}'`
+    if [ ! -z $PID ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+fun_load_config() {
+    if [ ! -r ${CONFIGFILE} ]; then
+        echo "config file ${CONFIGFILE} not found"
+        return 1
+    else
+        . ${CONFIGFILE}
+        cd ${ProGramInstallPath}
+    fi
+}
+
+fun_randstr() {
+  index=0
+  strRandomPass=""
+  for i in {a..z}; do arr[index]=$i; index=`expr ${index} + 1`; done
+  for i in {A..Z}; do arr[index]=$i; index=`expr ${index} + 1`; done
+  for i in {0..9}; do arr[index]=$i; index=`expr ${index} + 1`; done
+  for i in {1..16}; do strRandomPass="$strRandomPass${arr[$RANDOM%$index]}"; done
+  echo $strRandomPass
+}
+
+fun_start() {
+    if fun_check_run; then
+        echo "${NAME} (pid $PID) already running."
+        return 0
+    fi
+    echo -n "Starting ${ProgramName}: "
+    fun_load_config
+    ${BIN} -domain="$DOMAIN" -tunnelAddr=":$TUNNEL_PORT" -httpAddr=":$HTTP_PORT" -httpsAddr=":$HTTPS_PORT" -userManageAddr=":$USER_MANAGE_PORT" -userDBPath="$USER_DB_PATH" -tlsCrt=$TLSCRT_PATH -tlsKey=$TLSKEY_PATH -log-level="$LOG_LEVEL" -log=$NGROKD_LOG -pass="$PASSWD" >/dev/null 2>&1 & echo $! > $PID_FILE
+    RETVAL=$?
+    PID=$(ps -ef | grep -v grep | grep -i ${BIN} | awk '{print $2}')
+    if [ -f /etc/rc.d/init.d/functions ]; then
+        [ $RETVAL -eq 0 ] && success
+    else
+        if fun_check_run; then
+            echo "    [ok]"
+        else
+            echo "    [FAILED]"
+            RETVAL=1
+        fi
+    fi
+}
+
+fun_stop() {
+    if fun_check_run; then
+        echo -n $"Stopping ${ProgramName}: "
+        killall ngrokd
+        RETVAL=$?
+        [ $RETVAL -eq 0 ]
+        rm -f $PID_FILE
+    else
+        echo "${ProgramName} is not running."
+    fi
+}
+
+fun_restart() {
+    fun_stop
+    sleep 1
+    fun_start
+}
+
+fun_status() {
+    fun_check_run
+    case $? in
+        0)
+        echo "$NAME (pid $PID) is running..."
+        ;;
+        1|2)
+        echo "$NAME is stopped"
+        RET_VAL=1
+        ;;
+    esac
+}
+
+checkos() {
+    if grep -Eqi "CentOS" /etc/issue || grep -Eq "CentOS" /etc/*-release; then
+        OS=CentOS
+    elif grep -Eqi "Debian" /etc/issue || grep -Eq "Debian" /etc/*-release; then
+        OS=Debian
+    elif grep -Eqi "Ubuntu" /etc/issue || grep -Eq "Ubuntu" /etc/*-release; then
+        OS=Ubuntu
+    else
+        echo "Not support OS, Please reinstall OS and retry!"
+        exit 1
+    fi
+}
+
+fun_config() {
+    if [ -s ${CONFIGFILE} ]; then
+        vi ${CONFIGFILE}
+    else
+        echo "${ProgramName} configuration file not found!"
+    fi
+}
+
+fun_set_ngrok_username() {
+    userName=""
+    read -p "Please input UserName for Ngrok(e.g.:ZhangSan):" userName
+    check_ngrok_username
+}
+
+check_ngrok_username() {
+    # check ngrok userName
+    if [ "$userName" = "" ]; then
+        echo "Your input is empty,please input again..."
+        fun_set_ngrok_username
+    else
+        echo "Your username: ${userName}"
+        fun_set_ngrok_subdomain
+    fi
+}
+
+fun_set_ngrok_subdomain() {
+    # Set ngrok pass
+    subdomain=""
+    echo "Please input subdomain for Ngrok(e.g.:dns1 dns2 dns3 dns4 dns5):"
+    read -p "subdomain:" subdomain
+    check_ngrok_subdomain
+}
+
+str_combine() {
+    local array="$1"
+    local delimiter="$2"
+    local string=""
+    if [ -n "$array" ]; then
+        local part
+        while read -d "$delimiter" part; do
+            if [ -z "$string" ]; then
+                string=\"${part}\"
+            else
+                string=${string},\"${part}\"
+            fi
+        done <<< "$array"
+        if [ -z "$string" ]; then
+            string=\"${part}\"
+        else
+            string=${string},\"${part}\"
+        fi
+    fi
+    echo $string
+}
+
+str_combine_domain() {
+    local array="$1"
+    local delimiter="$2"
+    local domain="$3"
+    local string=""
+    if [ -n "$array" ]; then
+        local part
+        while read -d "$delimiter" part; do
+            if [ -z "$string" ]; then
+                string=\"${part}.${domain}\"
+            else
+                string=${string},\"${part}.${domain}\"
+            fi
+        done <<< "$array"
+        if [ -z "$string" ]; then
+            string=\"${part}.${domain}\"
+        else
+            string=${string},\"${part}.${domain}\"
+        fi
+    fi
+    echo $string
+}
+
+check_ngrok_subdomain() {
+    # check ngrok subdomain
+    if [ "$subdomain" = "" ]; then
+        echo "Your input is empty, please input again."
+        fun_set_ngrok_subdomain
+    else
+        fun_load_config
+        subdns=`str_combine "${subdomain}" " "`
+        FQDN=`str_combine_domain "${subdomain}" " " "${DOMAIN}"`
+        echo "Your subdomain: ${subdns}"
+        fun_set_ngrok_authId
+    fi
+}
+
+fun_set_ngrok_authId() {
+    strPass=`fun_randstr`
+    echo "Please input the password (more than 8) of Ngrok authId:"
+    read -p "(Default password: ${strPass}):" strPassword
+    if [ "$strPassword" = "" ]; then
+        strPassword=$strPass
+    fi
+    check_ngrok_authId
+}
+
+check_ngrok_authId() {
+    # check ngrok authId
+    if [ "${strPassword}" = "" ]; then
+        echo "Your input is empty, please input again..."
+        fun_set_ngrok_authId
+    else
+        echo "Your authId: ${strPassword}"
+        fun_adduser_command
+    fi
+}
+
+fun_adduser_command() {
+    fun_load_config
+    clear
+    echo  curl -H \"Content-Type: application/json\" -H \"Auth:${PASSWD}\" -X POST -d \''{'\"userId\":\"${strPassword}\",\"authId\":\"${userName}\",\"dns\":[${subdns}]'}'\' http://localhost:${USER_MANAGE_PORT}/adduser > ${ProGramInstallPath}/.ngrok_adduser.sh
+    chmod +x ${ProGramInstallPath}/.ngrok_adduser.sh
+    . ${ProGramInstallPath}/.ngrok_adduser.sh
+    rm -f ${ProGramInstallPath}/.ngrok_adduser.sh
+    echo ""
+    echo "User list :"
+    curl -H "Content-Type: application/json" -H "Auth:${PASSWD}" -X GET http://localhost:${USER_MANAGE_PORT}/info
+    echo "============================================================="
+    echo "Server: ${DOMAIN}:${TUNNEL_PORT}"
+    echo "userId: ${userName}"
+    echo "authId: ${strPassword}"
+    echo "Subdomain: ${subdns}"
+    echo "Your FQDN: ${FQDN}"
+    echo "============================================================="
+}
+
+fun_adduser() {
+    if fun_check_run; then
+        fun_load_config
+        fun_set_ngrok_username
+    else
+        echo "${ProgramName} is not running."
+    fi
+}
+
+fun_deluser() {
+    if [ -z "${1}" ]; then
+        strWantdeluser=""
+        fun_userlist
+        echo ""
+        read -p "Please input del username you want:" strWantdeluser
+        if [ "${strWantdeluser}" = "" ]; then
+            echo "Error: You must input username!!"
+            exit 1
+        else
+            deluser_Confirm_clang "${strWantdeluser}"
+        fi
+    else
+        deluser_Confirm_clang "${1}"
+    fi
+}
+
+deluser_Confirm_clang() {
+    if [ -z "${1}" ]; then
+        echo "Error: You must input username!!"
+        exit 1
+    else
+        strDelUser="${1}"
+        echo "You want del ${strDelUser}!"
+        read -p "(if you want please input: y,Default [no]):" strConfirmDel
+        case "$strConfirmDel" in
+        y|Y|Yes|YES|yes|yES|yEs|YeS|yeS)
+        echo ""
+        strConfirmDel="y"
+        ;;
+        n|N|No|NO|no|nO)
+        echo ""
+        strConfirmDel="n"
+        ;;
+        *)
+        echo ""
+        strConfirmDel="n"
+        esac
+        if [ $strConfirmDel = "y" ]; then
+            fun_load_config
+            if [ -s "${USER_DB_PATH}/ng/ro/ngrok:${strDelUser}" ]; then
+                rm -f ${USER_DB_PATH}/ng/ro/ngrok:${strDelUser}
+                echo "Delete user ${strDelUser}　ok! Restart ${NAME}..."
+                fun_restart
+            else
+                echo ""
+                echo "Error: user ${strDelUser} not found!"
+            fi
+        else
+            echo "you cancel!"
+        fi
+    fi
+}
+
+fun_userlist() {
+    echo "Ngrok user list:"
+    fun_load_config
+    ls ${USER_DB_PATH}/ng/ro/ |cut -d ':' -f 2
+}
+
+fun_info(){
+    if fun_check_run; then
+        fun_load_config
+        curl -H "Content-Type: application/json" -H "Auth:${PASSWD}" -X GET http://localhost:${USER_MANAGE_PORT}/info
+    else
+        echo "${ProgramName} is not running."
+    fi
+}
+
+arg1=$1
+arg2=$2
+[  -z ${arg1} ]
+case "${arg1}" in
+    start|stop|restart|status|config|adduser|deluser|userlist|info)
+        fun_${arg1} ${arg2}
+    ;;
+    *)
+        echo "Usage: $SCRIPTNAME {start|stop|restart|status|config|adduser|deluser|userlist|info}"
+        RET_VAL=1
+    ;;
+esac
+exit $RET_VAL

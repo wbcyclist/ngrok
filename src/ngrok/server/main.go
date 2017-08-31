@@ -128,7 +128,7 @@ func Main() {
 
 	//log.Info("start config main")
 	//Add by jannson, start config http server
-	go ConfigMain(opts.userManageAddr)
+	go ConfigMain(opts.userManageAddr, opts.userDBPath)
 	
 	// listen for http
 	if opts.httpAddr != "" {

@@ -311,11 +311,13 @@ func CheckForLogin(authMsg *msg.Auth) *UserInfo {
 	return usr
 }
 
-func NewConfigMgr() *ConfigMgr {
-	path := "/tmp/db-diskv"
+func NewConfigMgr(dbPath string) *ConfigMgr {
+	if len(dbPath) == 0 {
+		dbPath = "/tmp/db-diskv"
+	}
 
 	diskv := diskv.New(diskv.Options{
-		BasePath:     path,
+		BasePath:     dbPath,
 		Transform:    blockTransform,
 		CacheSizeMax: 1024 * 1024, // 1MB
 	})
@@ -323,8 +325,8 @@ func NewConfigMgr() *ConfigMgr {
 	return &ConfigMgr{db: db, users: make(map[string]*UserInfo), dns: make(map[string]*UserInfo)}
 }
 
-func ConfigMain(addr string) {
-	cMgr = NewConfigMgr()
+func ConfigMain(addr string, dbPath string) {
+	cMgr = NewConfigMgr(dbPath)
 	cMgr.db.LoadAll(cMgr)
 
 	go func() {

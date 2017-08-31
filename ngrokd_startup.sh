@@ -1,9 +1,10 @@
 #!/bin/sh
 
-NGROKD="/root/ngrok/bin/ngrokd"
-NGROKD_LOG="/root/ngrokd.log"
+NGROKD="/usr/local/ngrok/bin/ngrokd"
+NGROKD_LOG="/var/log/ngrok/ngrokd.log"
 TLSCRT_PATH="/root/ngrok/assets/server/tls/snakeoil.crt"
 TLSKEY_PATH="/root/ngrok/assets/server/tls/snakeoil.key"
+USER_DB_PATH="/usr/local/ngrok/db-diskv"
 
 DOMAIN="xxx.com"
 HTTPADDR=":8080"
@@ -17,6 +18,7 @@ $NGROKD -domain="$DOMAIN" \
 		-httpAddr="$HTTPADDR" \
 		-httpsAddr="$HTTPSADDR" \
 		-userManageAddr="$USERMANAGEADDR" \
+		-userDBPath="$USER_DB_PATH" \
 		-tlsCrt=$TLSCRT_PATH \
 		-tlsKey=$TLSKEY_PATH \
 		-log-level="INFO" \
