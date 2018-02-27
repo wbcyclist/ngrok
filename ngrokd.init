@@ -227,27 +227,27 @@ check_ngrok_subdomain() {
         subdns=`str_combine "${subdomain}" " "`
         FQDN=`str_combine_domain "${subdomain}" " " "${DOMAIN}"`
         echo "Your subdomain: ${subdns}"
-        fun_set_ngrok_authId
+        fun_set_ngrok_userId
     fi
 }
 
-fun_set_ngrok_authId() {
+fun_set_ngrok_userId() {
     strPass=`fun_randstr`
-    echo "Please input the password (more than 8) of Ngrok authId:"
+    echo "Please input the password (more than 8) of Ngrok userId:"
     read -p "(Default password: ${strPass}):" strPassword
     if [ "$strPassword" = "" ]; then
         strPassword=$strPass
     fi
-    check_ngrok_authId
+    check_ngrok_userId
 }
 
-check_ngrok_authId() {
-    # check ngrok authId
+check_ngrok_userId() {
+    # check ngrok userId
     if [ "${strPassword}" = "" ]; then
         echo "Your input is empty, please input again..."
-        fun_set_ngrok_authId
+        fun_set_ngrok_userId
     else
-        echo "Your authId: ${strPassword}"
+        echo "Your userId: ${strPassword}"
         fun_adduser_command
     fi
 }
@@ -264,8 +264,8 @@ fun_adduser_command() {
     curl -H "Content-Type: application/json" -H "Auth:${PASSWD}" -X GET http://localhost:${USER_MANAGE_PORT}/info
     echo "============================================================="
     echo "Server: ${DOMAIN}:${TUNNEL_PORT}"
-    echo "userId: ${userName}"
-    echo "authId: ${strPassword}"
+    echo "authId: ${userName}"
+    echo "userId: ${strPassword}"
     echo "Subdomain: ${subdns}"
     echo "Your FQDN: ${FQDN}"
     echo "============================================================="

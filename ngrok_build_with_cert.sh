@@ -12,9 +12,9 @@ SNAKEOIL_KEY_PATH="/etc/nginx/ssl/jasio.me/key.pem"
 # curl -o $NGROKROOT_CRT_PATH https://letsencrypt.org/certs/letsencryptauthorityx1.pem
 curl -o ${NGROKROOT_CRT_PATH} https://letsencrypt.org/certs/letsencryptauthorityx3.pem
 
-yes | cp -rf ${NGROKROOT_CRT_PATH} ${NGROK_PATH}/assets/client/tls/ngrokroot.crt -f
-yes | cp -rf ${SNAKEOIL_CRT_PATH} ${NGROK_PATH}/assets/server/tls/snakeoil.crt -f
-yes | cp -rf ${SNAKEOIL_KEY_PATH} ${NGROK_PATH}/assets/server/tls/snakeoil.key -f
+yes | cp -f ${NGROKROOT_CRT_PATH} ${NGROK_PATH}/assets/client/tls/ngrokroot.crt
+yes | cp -f ${SNAKEOIL_CRT_PATH} ${NGROK_PATH}/assets/server/tls/snakeoil.crt
+yes | cp -f ${SNAKEOIL_KEY_PATH} ${NGROK_PATH}/assets/server/tls/snakeoil.key
 
 
 cd $NGROK_PATH
@@ -29,7 +29,7 @@ GOOS="linux" GOARCH="amd64" make release-server
 [ ! -d /var/log/ngrok ] && mkdir -p /var/log/ngrok
 [ ! -d ${NGROK_INSTALL_PATH}/db-diskv/ng/ro/ ] && mkdir -p ${NGROK_INSTALL_PATH}/db-diskv/ng/ro/
 [ ! -d ${NGROK_INSTALL_PATH}/bin/ ] && mkdir -p ${NGROK_INSTALL_PATH}/bin/
-yes | cp -rf ${NGROK_PATH}/bin/ngrokd ${NGROK_INSTALL_PATH}/bin/ngrokd -f
+yes | cp -f ${NGROK_PATH}/bin/ngrokd ${NGROK_INSTALL_PATH}/bin/ngrokd
 [ ! -x ${NGROK_INSTALL_PATH}/bin/ngrokd ] && chmod 755 ${NGROK_INSTALL_PATH}/bin/ngrokd
 
 # cp ${NGROK_PATH}/ngrokd_config.sh ${NGROK_INSTALL_PATH}/ngrokd_config.sh
